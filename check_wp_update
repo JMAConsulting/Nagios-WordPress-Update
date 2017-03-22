@@ -4,6 +4,7 @@ CURL=`which curl`
 CURL_OPTS='--user-agent check-wp-updates-nagios-plugin --insecure'
 BASENAME=`which basename`
 PROGNAME=`$BASENAME $0`
+SSL=/bin/false
 
 # Exit codes
 STATE_OK=0
@@ -13,24 +14,67 @@ STATE_UNKNOWN=3
 
 function print_usage
 {
-	echo "Usage: $PROGNAME <URL>" 
+	echo "Usage: $PROGNAME -H <hostname> [args]" 
+        echo "  -h, --help     Show this help text"
+        echo '  -H <hostname>  Hostname to use.'
+        echo "  -S             Use SSL (https) instead of http"
+	echo "  -P             Path to the remote script. Defaults to wp-version.php"	
 }
 
-if [ ! $1 ]; then
-	print_usage
-	exit $STATE_CRITICAL
+while test -n "$1"; do
+  case "$1" in
+    --help)
+      print_usage
+      exit $STATE_OK
+      ;;
+    -h)
+      print_usage
+      exit $STATE_OK
+      ;;
+    -H)
+      hostname=$2
+      shift
+      ;;
+    -S)
+      SSL=/bin/true
+      ;;
+    -P)
+      path=$2
+      ;;
+    *)
+      $ECHO "Unknown argument: $1"
+      print_usage
+      exit $STATE_UNKNOWN
+  esac
+  shift
+done
+
+# Set a default for hostname
+if [ "$hostname" = "" ]; then
+  hostname=$NAGIOS_HOSTADDRESS
+fi
+
+# Set a default for path
+if [ "$path" = "" ]; then
+  path="wp-version.php"
+fi
+
+# Set the protocol.
+if $SSL; then
+  protocol="https://"
+else
+  protocol="http://"
 fi
 
 # Check that we're getting a 200 OK message for the wp-version.php file on the remote host. 
-response=`$CURL $CURL_OPTS -I $1`
+response=`$CURL $CURL_OPTS -I ${protocol}${hostname}/$path`
 if [[ $response != *"200 OK"* ]]; then
         echo 'CRITICAL - Checker Script not installed on remote host'
         exit $STATE_CRITICAL
 fi
 
 
-result=`$CURL $CURL_OPTS -s $1`
-
+result=`$CURL $CURL_OPTS -s ${protocol}${hostname}/$path`
 if [ $? != 0 ]; then
 	echo 'CRITICAL - Check plugin does not work. Maybe you need to install curl.'
 	exit $STATE_CRITICAL
