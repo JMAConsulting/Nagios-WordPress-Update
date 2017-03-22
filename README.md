@@ -2,6 +2,12 @@ Nagios-WordPress-Update
 ===============
 
 A Nagios plugin to check for WordPress version updates on a remote server without the use of NRPE.
+This fork is written to accept multiple parameters instead of a single URL.  This is advantageous for Icinga2 users, who can add this to their host file to pick up the correct URL:
+
+    vars.cms = "wordpress"
+    # optional - for SSL
+    vars.cms_use_ssl = true
+The WordPress file "wp-version.php" is untouched from the original.
 
 How to use:
 
@@ -11,20 +17,29 @@ How to use:
 - Create a service command template
 - Create a service check on your host
 
-__Command Template__
+__Command Template (Icinga 2)__
 
-	define command{
-	        command_name    check_wp_update
-	        command_line    $USER1$/check_wp_update $ARG1$
-	        }
+    object CheckCommand "wordpress" {
+      command = [
+        PluginDir + "/check_wp_update",
+        "-H", "$host_name$"
+      ]
 
-__Service Check__
+      arguments = {
+        "-S" = {
+          set_if = "$cms_use_ssl$"
+        }
+      }
+    }
 
-	define service{
-	        use                     generic-service
-	        host_name               example.com
-	        service_description     My WordPress Install
-	        check_command           check_wp_update!http://example.com/wp-version.php
-	        }
 
-Inspired by check\_wp\_version by @hteske. Original [here](http://exchange.nagios.org/directory/Plugins/CMS-and-Blog-Software/Wordpress/check_wp_version/details)
+__Service Check (Icinga 2)__
+    apply Service "wordpress" {
+      import "generic-service"
+
+      check_command = "wordpress"
+
+      assign where host.vars.cms == "wordpress"
+    }
+
+Many thanks to jinjie for the original, found [here](https://github.com/jinjie/Nagios-WordPress-Update)
