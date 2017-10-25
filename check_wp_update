@@ -40,6 +40,7 @@ while test -n "$1"; do
       ;;
     -P)
       path=$2
+      shift
       ;;
     *)
       $ECHO "Unknown argument: $1"

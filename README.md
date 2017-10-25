@@ -8,7 +8,9 @@ This fork is written to accept multiple parameters instead of a single URL.  Thi
     # optional - for SSL
     vars.cms_use_ssl = true
 The WordPress file "wp-version.php" is untouched from the original.
+If wp-version.php has different name
 
+    vars.path = "name-script.php"
 How to use:
 
 - Upload wp-version.php to your WordPress root installation
@@ -20,14 +22,15 @@ How to use:
 __Command Template (Icinga 2)__
 
     object CheckCommand "wordpress" {
-      command = [
-        PluginDir + "/check_wp_update",
-        "-H", "$host_name$"
-      ]
-
+      import "plugin-check-command"
+      command = [ PluginDir + "/check_wp_update" ]
       arguments = {
+        "-H" = "$host_name$"
         "-S" = {
           set_if = "$cms_use_ssl$"
+        }
+        "-P" = {
+          set_if = "$path$"
         }
       }
     }
