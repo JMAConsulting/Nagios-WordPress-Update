@@ -1,7 +1,7 @@
 #!/bin/bash
 
 CURL=`which curl`
-CURL_OPTS='--user-agent check-wp-updates-nagios-plugin --insecure'
+CURL_OPTS='-s --user-agent check-wp-updates-nagios-plugin --insecure'
 BASENAME=`which basename`
 PROGNAME=`$BASENAME $0`
 SSL=/bin/false
@@ -69,16 +69,16 @@ fi
 
 # Check that we're getting a 200 OK message for the wp-version.php file on the remote host. 
 response=`$CURL $CURL_OPTS -I ${protocol}${hostname}/$path`
-if [[ $response != *"200 OK"* ]]; then
-        echo 'CRITICAL - Checker Script not installed on remote host'
-        exit $STATE_CRITICAL
+if [[ ( $response != *"200 OK"* && $response != *"HTTP/2 200"* ) ]]; then
+        echo 'UNKNOWN - Checker Script not installed on remote host'
+        exit $STATE_UNKNOWN
 fi
 
 
 result=`$CURL $CURL_OPTS -s ${protocol}${hostname}/$path`
 if [ $? != 0 ]; then
-	echo 'CRITICAL - Check plugin does not work. Maybe you need to install curl.'
-	exit $STATE_CRITICAL
+	echo 'UNKNOWN - Check plugin does not work. Maybe you need to install curl.'
+	exit $STATE_UNKNOWN
 else
 	status=`echo $result | cut -d\# -f1`
 	text=`echo $result | cut -d\# -f2`
@@ -96,4 +96,6 @@ else
 			exit $STATE_OK
 			;;
 	esac
+  echo "UNKNOWN - Can't parse output from this check.  Make sure your wp-version.php file on the remote WordPress site is not corrupt/modified."
+	exit $STATE_UNKNOWN
 fi
