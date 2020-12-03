@@ -50,41 +50,40 @@ else
 	$themes = get_site_transient('update_themes');
 }
 
-$core_available = FALSE;
-$plugin_available = FALSE;
-$theme_available = FALSE;
+$status = 'OK';
+$text = [];
+// Parse the plugin check and generate a list of plugins needing updates.
+if ($plugins->response ?? FALSE) {
+	$plugin_text = 'Plugin update(s) available: (';
+	foreach ($plugins->response as $plugin) {
+		$plugin_text .= "$plugin->slug: $plugin->new_version; ";
+	}
 
+	$plugin_text = substr($plugin_text, 0, -2) . ')';
+	$text[] = $plugin_text;
+	$status = 'WARNING';
+}
+
+// Parse the theme check and generate a list of themes needing updates.
+if ($themes->response ?? FALSE) {
+	$theme_text = 'Theme update(s) available: (';
+	foreach ($themes->response as $theme) {
+		$theme_text .= "{$theme['theme']}: {$theme['new_version']}; ";
+	}
+
+	$theme_text = substr($theme_text, 0, -2) . ')';
+	$text[] = $theme_text;
+	$status = 'WARNING';
+}
+
+// Parse the core check last, since a CRITICAL status overrides a WARNING.
 foreach ($core->updates as $core_update)
 {
 	if ($core_update->current != $wp_version)
 	{
-		$core_available = TRUE;
+	        $text[] = 'Core update available';
+		$status = 'CRITICAL';
 	}
 }
 
-$plugin_available = (count($plugins->response) > 0);
-$theme_available = (count($themes->response) > 0);
-
-$text = array();
-
-if ($core_available)
-	$text[] = 'Core updates available';
-
-if ($plugin_available)
-	$text[] = 'Plugin updates available';
-
-if ($theme_available)
-	$text[] = 'Theme updates available';
-
-$status = 'OK';
-
-if ($core_available)
-{
-	$status = 'CRITICAL';
-}
-elseif ($theme_available OR $plugin_available)
-{
-	$status = 'WARNING';
-}
-
-echo $status . '#' . implode($text, ';');
+echo $status . '#' . implode($text, '; ');
